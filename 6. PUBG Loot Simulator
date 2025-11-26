@@ -1,0 +1,155 @@
+# PUBG Loot Simulator (Console)
+# Simple simulation of loot spawns with probabilities and an inventory summary.
+# Works interactively; if input() not supported (EOFError), falls back to random.
+
+import random
+from collections import Counter, defaultdict
+
+# ---- Loot tables (items with weights/probabilities) ----
+weapons = {
+    "Pistol (P92)": 15,
+    "Pistol (P18C)": 10,
+    "SMG (Uzi)": 12,
+    "SMG (Vector)": 5,
+    "AR (AKM)": 10,
+    "AR (M416)": 10,
+    "AR (SCAR-L)": 8,
+    "DMR (SKS)": 5,
+    "Sniper (AWM)": 1,        # rare
+    "Sniper (Kar98k)": 3,
+    "Shotgun (S12K)": 6,
+}
+
+attachments = {
+    "Red Dot": 18,
+    "Holographic": 10,
+    "2x Scope": 12,
+    "4x Scope": 8,
+    "8x Scope": 2,
+    "Suppressor (AR)": 6,
+    "Suppressor (SR)": 3,
+    "Grip (Vertical)": 10,
+    "Extended Mag": 12,
+    "None": 19,
+}
+
+armor = {"Level 3 Vest": 3, "Level 2 Vest": 10, "Level 1 Vest": 20, "None": 67}
+helmet = {"Level 3 Helmet": 2, "Level 2 Helmet": 8, "Level 1 Helmet": 15, "None": 75}
+backpack = {"Level 3 Bag": 5, "Level 2 Bag": 15, "Level 1 Bag": 25, "None": 55}
+
+meds = {"First Aid": 25, "Bandage": 45, "Med Kit": 10, "Energy Drink": 12, "Painkiller": 8}
+grenades = {"Frag": 15, "Smoke": 10, "Molotov": 5, "Stun": 8, "None": 62}
+
+# Special crates (very rare)
+airdrop = {"AWM + 8x + Level3 Vest": 1, "Groza + 4x + Level3 Vest": 2, "M249 + 4x + Level3 Vest": 1, "None": 96}
+
+# Utility: weighted random choice
+def weighted_choice(d):
+    items = list(d.keys())
+    weights = list(d.values())
+    return random.choices(items, weights=weights, k=1)[0]
+
+# Simulate a single loot spawn (one "building" or "area")
+def simulate_loot():
+    inv = defaultdict(list)
+    # chance to spawn weapon(s): 1 or 2 weapons possible
+    num_weapons = random.choices([0,1,2], weights=[5,70,25], k=1)[0]
+    for _ in range(num_weapons):
+        inv["Weapons"].append(weighted_choice(weapons))
+
+    # attachments: 0-2
+    num_attach = random.choices([0,1,2], weights=[30,55,15], k=1)[0]
+    for _ in range(num_attach):
+        inv["Attachments"].append(weighted_choice(attachments))
+
+    # armor, helmet, backpack
+    inv["Armor"].append(weighted_choice(armor))
+    inv["Helmet"].append(weighted_choice(helmet))
+    inv["Backpack"].append(weighted_choice(backpack))
+
+    # meds: 0-3
+    num_meds = random.choices([0,1,2,3], weights=[30,45,20,5], k=1)[0]
+    for _ in range(num_meds):
+        inv["Meds"].append(weighted_choice(meds))
+
+    # grenades: 0-2
+    num_gr = random.choices([0,1,2], weights=[60,30,10], k=1)[0]
+    for _ in range(num_gr):
+        inv["Grenades"].append(weighted_choice(grenades))
+
+    # small chance for airdrop nearby
+    if random.random() < 0.03:  # 3% chance
+        inv["Airdrop"].append(weighted_choice(airdrop))
+
+    return inv
+
+# Pretty print single loot
+def print_loot(inv, title="Loot Spawn"):
+    print(f"\n--- {title} ---")
+    for k, items in inv.items():
+        if items:
+            c = Counter(items)
+            pairs = ", ".join(f"{item} x{count}" for item, count in c.items())
+            print(f"{k}: {pairs}")
+        else:
+            print(f"{k}: None")
+    print("-----------------\n")
+
+# Run simulation for multiple spawns and aggregate
+def run_simulation(spawns=10):
+    aggregated = defaultdict(list)
+    for i in range(spawns):
+        inv = simulate_loot()
+        print_loot(inv, title=f"Spawn #{i+1}")
+        for k, v in inv.items():
+            aggregated[k].extend(v)
+    return aggregated
+
+# Summarize aggregated results
+def summary(agg):
+    print("\n=== Simulation Summary ===")
+    for k, items in agg.items():
+        if items:
+            c = Counter(items)
+            most_common = c.most_common(5)
+            total = sum(c.values())
+            print(f"\n{k} (total {total}):")
+            for it, cnt in most_common:
+                pct = cnt/total*100 if total>0 else 0
+                print(f"  {it} — {cnt} times ({pct:.1f}%)")
+        else:
+            print(f"\n{k}: None")
+    print("==========================\n")
+
+# Interactive / non-interactive runner
+def main():
+    print("PUBG Loot Simulator")
+    try:
+        spawns = int(input("Kitne spawn simulate karne hain? (example 5) : "))
+    except (ValueError, EOFError):
+        # Default if input fails or not provided
+        spawns = 5
+        print(f"(Input not available or invalid) Defaulting to {spawns} spawns.\n")
+
+    agg = run_simulation(spawns)
+    summary(agg)
+
+    # Save to file option
+    try:
+        save = input("Output file me save karna hai? (y/n): ").strip().lower()
+    except EOFError:
+        save = "n"
+
+    if save == "y":
+        fname = "pubg_loot_simulation.txt"
+        with open(fname, "w") as f:
+            f.write("PUBG Loot Simulation Results\n")
+            for k, items in agg.items():
+                f.write(f"\n{k}:\n")
+                c = Counter(items)
+                for it, cnt in c.most_common():
+                    f.write(f"{it} x{cnt}\n")
+        print(f"Saved to {fname}")
+
+if __name__ == "__main__":
+    main()
