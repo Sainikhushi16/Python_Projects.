@@ -1,0 +1,14 @@
+import random
+
+print("🎲 Welcome to Dice Rolling Game! 🎲")
+
+while True:
+    input("Press Enter to roll the dice...")
+
+    dice = random.randint(1, 6)
+    print(f"\nYou rolled: {dice}")
+
+    again = input("\nRoll again? (y/n): ").lower()
+    if again != "y":
+        print("\nThanks for playing! 😊")
+        break
