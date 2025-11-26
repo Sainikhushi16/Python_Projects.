@@ -1,0 +1,18 @@
+score = 0
+
+questions = {
+    "Capital of India? ": "delhi",
+    "5 + 7 = ? ": "12",
+    "Programming language starting with P? ": "python"
+}
+
+for q, ans in questions.items():
+    user = input(q).lower()
+    if user == ans:
+        print("Correct!")
+        score += 1
+    else:
+        print("Wrong!")
+
+print("Your score:", score)
+
